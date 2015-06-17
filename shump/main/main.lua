@@ -1,5 +1,6 @@
 function love.load()
 	love.window.setMode(240, 320)
+	baseTimer = 0
 	sprites = {}
 	sprites = love.graphics.newImage("/sprites/chara1.png")
 	shotSprites = love.graphics.newImage("/sprites/icon0.png")
@@ -24,19 +25,24 @@ function love.load()
 	enemies = {}
 
 	enemy = {}
-	enemy.width = 14
-	enemy.height = 29
-	enemy.health = 3
-	enemy.speed = 1
-	enemy.sprite = love.graphics.newQuad(
-		7, 35, 18, 29, sprites:getWidth(), sprites:getHeight())
-	enemy.x = 0
-	enemy.y = 0
-	enemy.curve = love.math.newBezierCurve(0, 0, 0, 250, 245, 325)
-	enemy.j = 0
-	enemy.speed = .01
-	table.insert(enemies, enemy)
-	spawnTable = 1
+	enemy.__index = enemy
+	function enemy.create()
+		local e = {}
+		setmetatable(e, enemy)
+		e.width = 14
+		e.height = 29
+		e.health = 3
+		e.speed = 1
+		e.sprite = love.graphics.newQuad(
+			7, 35, 18, 29, sprites:getWidth(), sprites:getHeight())
+		e.x = 0
+		e.y = 0
+		e.curve = love.math.newBezierCurve(0, 0, 0, 250, 245, 325)
+		e.j = 0
+		e.speed = .01
+		return e
+	end
+	spawnTable = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 end
 
 function love.keypressed(key)
@@ -49,7 +55,11 @@ end
 function love.update(dt)
 	player.go = false
 	if startTimer then
-		timer = timer + dt
+		baseTimer = baseTimer + dt
+	end
+	if baseTimer > 1 then
+		baseTimer = baseTimer - 1
+		timer = timer + 1
 	end
 	if love.keyboard.isDown(" ") then
 		if player.isShooting > .05 then
@@ -103,7 +113,16 @@ function love.update(dt)
 	for i,v in ipairs(remShot) do
 		table.remove(player.shots, v)
 	end
-	if startTimer and math.floor(timer) >= spawnTable then
+
+	for i,v in ipairs(spawnTable) do
+		if startTimer and timer == v then
+			enemies[#enemies+1] = enemy.create()
+			table.remove(spawnTable, v)
+		end
+	end
+
+
+	if startTimer then
 		for i,v in ipairs(enemies) do
 			v.j = v.j +  v.speed
 			if v.j >= 1 then
@@ -124,7 +143,7 @@ function love.draw()
 		love.graphics.draw(shotSprites, player.shots.shotSprite, (v.x + player.width), v.y)
 	end
 	for i,v in ipairs(enemies) do
-		love.graphics.draw(sprites, enemies[i].sprite, enemies[i].x, enemies[i].y)
+		love.graphics.draw(sprites, v.sprite, v.x, v.y)
 	end
 end
 
