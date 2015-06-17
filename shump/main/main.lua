@@ -1,39 +1,50 @@
 function love.load()
+	sprites = {}
 	sprites = love.graphics.newImage("/sprites/chara1.png")
+	shotSprites = love.graphics.newImage("/sprites/icon0.png")
 
 	player = {}
 	player.x = 300
 	player.y = 450
 	player.width = 5
 	player.height = 5
-	player.speed = 150 
+	player.speed = 200
 	player.shots = {}
-	player.sprite = love.graphics.newQuad(7, 3, 18, 29, sprites:getWidth(), sprites:getHeight())
-	player.moving = love.graphics.newQuad(132, 0, 24, 32, sprites:getWidth(), sprites:getHeight())
+	player.shotStrength = 1
+	player.shots.shotSprite = love.graphics.newQuad(
+		6, 47, 3, 16, shotSprites:getWidth(), shotSprites:getHeight())
+	player.sprite = love.graphics.newQuad(
+		7, 3, 18, 29, sprites:getWidth(), sprites:getHeight())
+	player.moving = love.graphics.newQuad(
+		132, 0, 24, 32, sprites:getWidth(), sprites:getHeight())
 	player.go = false
+	player.isShooting = 0
 
 	enemies = {}
 
-	for i = 0,7 do
+	for i = 0,17 do
 		enemy = {}
-		enemy.width = 40
-		enemy.height = 20
-		enemy.x = i * (enemy.width + 60) + 100
-		enemy.y = enemy.height + 100
+		enemy.width = 14
+		enemy.height = 29
+		enemy.health = 5
+		enemy.speed = 1
+		enemy.sprite = love.graphics.newQuad(
+			7, 35, 18, 29, sprites:getWidth(), sprites:getHeight())
+		enemy.x = i * (enemy.width + 30) + 10
+		enemy.y = 0
 		table.insert(enemies, enemy)
-	end
-end
-
-
-
-function love.keyreleased(key)
-	if (key == " ") then
-		shoot()
 	end
 end
 
 function love.update(dt)
 	player.go = false
+	if love.keyboard.isDown(" ") then
+		if player.isShooting > .05 then
+			shoot()
+			player.isShooting = 0
+		end
+		player.isShooting = player.isShooting + dt
+	end
 	if love.keyboard.isDown("left") then
 		player.x = player.x - player.speed * dt
 		player.go = true
@@ -52,10 +63,11 @@ function love.update(dt)
 	end
 	
 	local remEnemy = {}
+	remEnemy.health = 0
 	local remShot = {}
 
 	for i,v in ipairs(player.shots) do
-		v.y = v.y - dt * 100
+		v.y = v.y - dt * 500
 
 		if v.y < 0 then
 			table.insert(remShot, i)
@@ -63,7 +75,10 @@ function love.update(dt)
 
 		for ii,vv in ipairs(enemies) do
 			if CheckCollision(v.x, v.y, 2, 5, vv.x, vv.y, vv.width, vv.height) then
-				table.insert(remEnemy, ii)
+				enemies[ii].health = enemies[ii].health - player.shotStrength
+				if enemies[ii].health == 0 then
+					table.insert(remEnemy, ii)
+				end
 				table.insert(remShot, i)
 			end
 		end
@@ -78,34 +93,22 @@ function love.update(dt)
 	end
 
 	for i,v in ipairs(enemies) do
-		v.y = v.y + dt
-
-		if v.y > 465 then
-		end
+		v.y = v.y + v.speed
 	end
 
 end
  
 function love.draw()
-	love.graphics.setColor(0, 255, 0, 255)
-	love.graphics.rectangle("fill", 0, 465, 800, 150)
-
-	love.graphics.setColor(255, 255, 255, 255)
-	-- love.graphics.rectangle("fill", player.x, player.y, player.width, player.height)
-	
 	if player.go == true then
 		love.graphics.draw(sprites, player.moving, player.x, player.y)
 	else
 		love.graphics.draw(sprites, player.sprite, player.x, player.y)
 	end
-	love.graphics.setColor(255, 255, 255, 255)
 	for i,v in ipairs(player.shots) do
-		love.graphics.rectangle("fill", v.x, v.y, 2, 5)
+		love.graphics.draw(shotSprites, player.shots.shotSprite, (v.x + player.width), v.y)
 	end
-
-	love.graphics.setColor(0, 255, 255, 255)
 	for i,v in ipairs(enemies) do
-		love.graphics.rectangle("fill", v.x, v.y, v.width, v.height)
+		love.graphics.draw(sprites, enemies[i].sprite, enemies[i].x, enemies[i].y)
 	end
 end
 
