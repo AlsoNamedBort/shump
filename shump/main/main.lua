@@ -1,6 +1,6 @@
 function love.load()
 	love.window.setMode(240, 320)
-	baseTimer = 0
+	timer = 0
 	sprites = {}
 	sprites = love.graphics.newImage("/sprites/chara1.png")
 	shotSprites = love.graphics.newImage("/sprites/icon0.png")
@@ -54,13 +54,13 @@ end
 
 function love.update(dt)
 	player.go = false
-	if startTimer then
-		baseTimer = baseTimer + dt
-	end
-	if baseTimer > 1 then
-		baseTimer = baseTimer - 1
-		timer = timer + 1
-	end
+	-- if startTimer then
+	-- 	baseTimer = baseTimer + dt
+	-- end
+	-- if baseTimer > 1 then
+	-- 	baseTimer = baseTimer - 1
+	-- 	timer = timer + 1
+	-- end
 	if love.keyboard.isDown(" ") then
 		if player.isShooting > .05 then
 			shoot()
@@ -116,8 +116,10 @@ function love.update(dt)
 
 	for i,v in ipairs(spawnTable) do
 		if startTimer and timer == v then
-			enemies[#enemies+1] = enemy.create()
-			table.remove(spawnTable, v)
+			enemies[#enemies + 1] = enemy.create()
+			z = v
+		else
+			timer = timer + dt
 		end
 	end
 
@@ -134,6 +136,13 @@ function love.update(dt)
 end
  
 function love.draw()
+	love.graphics.setColor(0, 255, 0, 255)
+	if z ~= nil then
+		love.graphics.print(z, 120, 120)
+	end
+	for i,v in ipairs(enemies) do
+		love.graphics.draw(sprites, v.sprite, v.x, v.y)
+	end
 	if player.go == true then
 		love.graphics.draw(sprites, player.moving, player.x, player.y)
 	else
@@ -141,9 +150,6 @@ function love.draw()
 	end
 	for i,v in ipairs(player.shots) do
 		love.graphics.draw(shotSprites, player.shots.shotSprite, (v.x + player.width), v.y)
-	end
-	for i,v in ipairs(enemies) do
-		love.graphics.draw(sprites, v.sprite, v.x, v.y)
 	end
 end
 
