@@ -23,25 +23,34 @@ function love.load()
 
 	enemies = {}
 
-	for i = 0,5 do
-		enemy = {}
-		enemy.width = 14
-		enemy.height = 29
-		enemy.health = 5
-		enemy.speed = 1
-		enemy.sprite = love.graphics.newQuad(
-			7, 35, 18, 29, sprites:getWidth(), sprites:getHeight())
-		enemy.x = i * (enemy.width + 30) + 10
-		enemy.y = 0
-		table.insert(enemies, enemy)
+	enemy = {}
+	enemy.width = 14
+	enemy.height = 29
+	enemy.health = 3
+	enemy.speed = 1
+	enemy.sprite = love.graphics.newQuad(
+		7, 35, 18, 29, sprites:getWidth(), sprites:getHeight())
+	enemy.x = 0
+	enemy.y = 0
+	enemy.curve = love.math.newBezierCurve(0, 0, 0, 250, 245, 325)
+	enemy.j = 0
+	enemy.speed = .01
+	table.insert(enemies, enemy)
+	spawnTable = 1
+end
+
+function love.keypressed(key)
+	if key == "return" and startTimer ~= true then
+		startTimer = true
+		timer = 0
 	end
-	curve = love.math.newBezierCurve(0, 0, 10, 10, 240, 320)
-	j = 0
-	k = 0
 end
 
 function love.update(dt)
 	player.go = false
+	if startTimer then
+		timer = timer + dt
+	end
 	if love.keyboard.isDown(" ") then
 		if player.isShooting > .05 then
 			shoot()
@@ -67,7 +76,6 @@ function love.update(dt)
 	end
 	
 	local remEnemy = {}
-	remEnemy.health = 0
 	local remShot = {}
 
 	for i,v in ipairs(player.shots) do
@@ -79,8 +87,8 @@ function love.update(dt)
 
 		for ii,vv in ipairs(enemies) do
 			if CheckCollision(v.x, v.y, 2, 5, vv.x, vv.y, vv.width, vv.height) then
-				enemies[ii].health = enemies[ii].health - player.shotStrength
-				if enemies[ii].health == 0 then
+				vv.health = vv.health - player.shotStrength
+				if vv.health == 0 then
 					table.insert(remEnemy, ii)
 				end
 				table.insert(remShot, i)
@@ -95,26 +103,14 @@ function love.update(dt)
 	for i,v in ipairs(remShot) do
 		table.remove(player.shots, v)
 	end
-
-	for i,v in ipairs(enemies) do
-		-- v.y = v.y + v.speed
-		
-		if k == 0 then
-			j = j + .01
-			if j >= 1 then
-				k = 1
-				j = .99
+	if startTimer and math.floor(timer) >= spawnTable then
+		for i,v in ipairs(enemies) do
+			v.j = v.j +  v.speed
+			if v.j >= 1 then
+				v.j = .99
 			end
+			v.x, v.y = v.curve:evaluate(v.j)
 		end
-		if k == 1 then
-			j = j - .01
-			if j <= 0 then
-				k = 0
-				j = 0
-			end
-		end
-		v.x, v.y = curve:evaluate(j)
-		-- v.y = curve:evaluate(j)
 	end
 end
  
