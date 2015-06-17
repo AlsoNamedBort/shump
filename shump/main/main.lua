@@ -1,11 +1,12 @@
 function love.load()
+	love.window.setMode(240, 320)
 	sprites = {}
 	sprites = love.graphics.newImage("/sprites/chara1.png")
 	shotSprites = love.graphics.newImage("/sprites/icon0.png")
 
 	player = {}
-	player.x = 300
-	player.y = 450
+	player.x = 120
+	player.y = 280
 	player.width = 5
 	player.height = 5
 	player.speed = 200
@@ -22,7 +23,7 @@ function love.load()
 
 	enemies = {}
 
-	for i = 0,17 do
+	for i = 0,5 do
 		enemy = {}
 		enemy.width = 14
 		enemy.height = 29
@@ -34,6 +35,9 @@ function love.load()
 		enemy.y = 0
 		table.insert(enemies, enemy)
 	end
+	curve = love.math.newBezierCurve(0, 0, 10, 10, 240, 320)
+	j = 0
+	k = 0
 end
 
 function love.update(dt)
@@ -93,9 +97,25 @@ function love.update(dt)
 	end
 
 	for i,v in ipairs(enemies) do
-		v.y = v.y + v.speed
+		-- v.y = v.y + v.speed
+		
+		if k == 0 then
+			j = j + .01
+			if j >= 1 then
+				k = 1
+				j = .99
+			end
+		end
+		if k == 1 then
+			j = j - .01
+			if j <= 0 then
+				k = 0
+				j = 0
+			end
+		end
+		v.x, v.y = curve:evaluate(j)
+		-- v.y = curve:evaluate(j)
 	end
-
 end
  
 function love.draw()
