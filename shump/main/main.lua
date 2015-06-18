@@ -24,11 +24,11 @@ function love.load()
 
 	enemies = {}
 
-	enemy = {}
-	enemy.__index = enemy
-	function enemy.create()
+	popcornLeft = {}
+	popcornLeft.__index = popcornLeft
+	function popcornLeft.create()
 		local e = {}
-		setmetatable(e, enemy)
+		setmetatable(e, popcornLeft)
 		e.width = 14
 		e.height = 29
 		e.health = 3
@@ -37,12 +37,37 @@ function love.load()
 			7, 35, 18, 29, sprites:getWidth(), sprites:getHeight())
 		e.x = 0
 		e.y = 0
-		e.curve = love.math.newBezierCurve(0, 0, 0, 250, 245, 325)
+		e.curve = love.math.newBezierCurve(0, 0, 120, 250, 245, 325)
 		e.j = 0
 		e.speed = .01
 		return e
 	end
-	spawnTable = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+	popcornRight = {}
+	popcornRight.__index = popcornRight
+	function popcornRight.create()
+		local e = {}
+		setmetatable(e, popcornRight)
+		e.width = 14
+		e.height = 29
+		e.health = 3
+		e.speed = 1
+		e.sprite = love.graphics.newQuad(
+			7, 35, 18, 29, sprites:getWidth(), sprites:getHeight())
+		e.x = 0
+		e.y = 0
+		e.curve = love.math.newBezierCurve(240, 0, 120, 250, 0, 325)
+		e.j = 0
+		e.speed = .01
+		return e
+	end
+	spawnTable = {}
+	spawnTable.type = {popcornLeft, popcornLeft, popcornRight, popcornRight, popcornLeft, popcornRight, popcornLeft, popcornLeft, "end"}
+	spawnTable.time = {0, 2, 2, 4, 6, 7, 7, 8, 9}
+	levelSize = 0
+	for i,v in ipairs(spawnTable.type) do
+		levelSize = levelSize + 1
+	end
+	b = 1
 end
 
 function love.keypressed(key)
@@ -54,13 +79,6 @@ end
 
 function love.update(dt)
 	player.go = false
-	-- if startTimer then
-	-- 	baseTimer = baseTimer + dt
-	-- end
-	-- if baseTimer > 1 then
-	-- 	baseTimer = baseTimer - 1
-	-- 	timer = timer + 1
-	-- end
 	if love.keyboard.isDown(" ") then
 		if player.isShooting > .05 then
 			shoot()
@@ -85,7 +103,7 @@ function love.update(dt)
 		player.go = true
 	end
 	
-	local remEnemy = {}
+	local rempopcornLeft = {}
 	local remShot = {}
 
 	for i,v in ipairs(player.shots) do
@@ -99,14 +117,14 @@ function love.update(dt)
 			if CheckCollision(v.x, v.y, 2, 5, vv.x, vv.y, vv.width, vv.height) then
 				vv.health = vv.health - player.shotStrength
 				if vv.health == 0 then
-					table.insert(remEnemy, ii)
+					table.insert(rempopcornLeft, ii)
 				end
 				table.insert(remShot, i)
 			end
 		end
 	end
 
-	for i,v in ipairs(remEnemy) do
+	for i,v in ipairs(rempopcornLeft) do
 		table.remove(enemies, v)
 	end
 
@@ -114,13 +132,12 @@ function love.update(dt)
 		table.remove(player.shots, v)
 	end
 
-	for i,v in ipairs(spawnTable) do
-		if startTimer and timer == v then
-			enemies[#enemies + 1] = enemy.create()
-			z = v
-		else
-			timer = timer + dt
-		end
+	if startTimer and timer >= spawnTable.time[b] and b < levelSize then
+		print(timer)
+		enemies[#enemies + 1] = spawnTable.type[b].create()
+		b = b + 1
+	else
+		timer = timer + dt
 	end
 
 
@@ -136,10 +153,6 @@ function love.update(dt)
 end
  
 function love.draw()
-	love.graphics.setColor(0, 255, 0, 255)
-	if z ~= nil then
-		love.graphics.print(z, 120, 120)
-	end
 	for i,v in ipairs(enemies) do
 		love.graphics.draw(sprites, v.sprite, v.x, v.y)
 	end
