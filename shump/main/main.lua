@@ -14,9 +14,10 @@ function love.load()
 	player.width = 5
 	player.height = 5
 	player.speed = 200
-	player.health = 1
+	player.health = 10
 	player.shots = {}
 	player.shotStrength = 1
+	player.shotSpeed = 500
 	player.shots.shotSprite = love.graphics.newQuad(
 		6, 47, 3, 16, shotSprites:getWidth(), shotSprites:getHeight())
 	player.sprite = love.graphics.newQuad(
@@ -27,7 +28,7 @@ function love.load()
 	player.isShooting = 0
 
 	enemies = {}
-
+	bullets = {}
 	enemy = {}
 	enemy.__index = enemy
 	function enemy.create(eType, eLocation, ePattern)
@@ -37,10 +38,15 @@ function love.load()
 			e.width = 14
 			e.height = 29
 			e.health = 3
-			e.speed = 1
 			e.sprite = love.graphics.newQuad(
 				7, 35, 18, 29, sprites:getWidth(), sprites:getHeight())
-			e.speed = .01
+			e.speed = .0025
+			e.shots = {}
+			e.shotType = "threesixty"
+			e.shotSpeed = .75
+			e.shotFreq = 2
+			e.shotTimer = 0
+			e.fired = false
 		end
 		e.x = eLocation.x
 		e.y = eLocation.y
@@ -81,6 +87,9 @@ function love.draw()
 		love.graphics.draw(sprites, player.moving, player.x, player.y)
 	else
 		love.graphics.draw(sprites, player.sprite, player.x, player.y)
+	end
+	for i,v in ipairs(bullets) do
+		love.graphics.draw(shotSprites, v.shotSprite, v.x, v.y)
 	end
 	for i,v in ipairs(player.shots) do
 		love.graphics.draw(shotSprites, player.shots.shotSprite, (v.x + player.width), v.y)
@@ -142,11 +151,12 @@ end
 
 function updateShots(dt)
 	local remEnemy = {}
-	local remShot = {}
+	local remEShot = {}
+	local remPShot = {}
 	for i,v in ipairs(player.shots) do
-		v.y = v.y - dt * 500
-		if v.y < 0 then
-			table.insert(remShot, i)
+		v.y = v.y - dt * player.shotSpeed
+		if v.y < 0 or v.x < 0 or v.y > 320 or v.x > 240 then
+			table.insert(remPShot, i)
 		end
 
 		for ii,vv in ipairs(enemies) do
@@ -155,21 +165,78 @@ function updateShots(dt)
 				if vv.health == 0 then
 					table.insert(remEnemy, ii)
 				end
-				table.insert(remShot, i)
+				table.insert(remPShot, i)
 			end
+		end
+	end
+	for i,v in ipairs(bullets) do
+		if v.x then
+			v.x = v.x - v.speedX 
+		end
+		if v.y then
+			v.y = v.y - v.speedY
+		end
+
+		if CheckCollision(v.x, v.y, v.width, v.height, player.x + player.width, player.y + player.height, player.width, player.height) then
+			player.health = player.health - 1
+		end
+		if (v.y < 0 and v.x < 0) or (v.y > 320 and v.x > 240) then
+			table.insert(remEShot, i)
 		end
 	end
 	for i,v in ipairs(remEnemy) do
 		table.remove(enemies, v)
 	end
-	for i,v in ipairs(remShot) do
+	for i,v in ipairs(remEShot) do
+		table.remove(bullets, v)
+	end
+	for i,v in ipairs(remPShot) do
 		table.remove(player.shots, v)
 	end
 end
 
+function bulletSpread(x, y, angle, speed, number, spread, type)
+	radSpread = spread * (math.pi/180)
+	bulletIncrement = radSpread/number
+	startRad = angle - radSpread/2 + bulletIncrement/2
+	thisAngle = startRad
+	
+	for i= 1, number do
+	    local bullet = getBullet(x, y, thisAngle, speed, type)
+		thisAngle = thisAngle + bulletIncrement
+		table.insert(bullets, bullet)
+	end
+end
+
+function getBullet(srcX, srcY, angle, speed, bType)
+    local bullet = {}
+	bullet.x = srcX
+	bullet.y = srcY
+	if bType == "tri" then
+		bullet.width = 4
+		bullet.height = 4
+		bullet.shotSprite = love.graphics.newQuad(
+			214, 38, bullet.width, bullet.height, shotSprites:getWidth(), shotSprites:getHeight())
+	elseif bType == "threesixty" then
+		bullet.width = 4
+		bullet.height = 4
+		bullet.shotSprite = love.graphics.newQuad(
+			230, 38, bullet.width, bullet.height, shotSprites:getWidth(), shotSprites:getHeight())
+	end
+	bullet.srcX = srcX
+	bullet.srcY = srcY
+	bullet.angle = angle
+	bullet.speed = speed
+	bullet.speedX = speed*math.cos(bullet.angle)
+	bullet.speedY = speed*math.sin(bullet.angle)
+	bullet.accel = 0
+	
+	return bullet
+end	
+
 function updateEnemies(dt)
+	local remEnemy = {}
 	if startTimer and timer >= spawnTable.time[sKey] and sKey < levelSize then
-		print(timer)
 		enemies[#enemies + 1] = enemy.create(spawnTable.type[sKey], spawnTable.location[sKey], spawnTable.pattern[sKey])
 		sKey = sKey + 1
 	else
@@ -178,10 +245,27 @@ function updateEnemies(dt)
 	if startTimer then
 		for i,v in ipairs(enemies) do
 			v.cEval = v.cEval +  v.speed
+			if v.shotTimer >= v.shotFreq then
+				if v.shotType == "tri" then
+					v.shots = bulletSpread(v.x, v.y, -math.pi/2, v.shotSpeed, 3, 60, v.shotType)
+				end
+				if v.shotType == "threesixty" then
+					v.shots = bulletSpread(v.x, v.y, -math.pi/2, v.shotSpeed, 25, 360, v.shotType)
+				end
+				v.shotTimer = 0
+			else
+				v.shotTimer = v.shotTimer + dt
+			end
 			if v.cEval >= 1 then
 				v.cEval = .99
 			end
 			v.x, v.y = v.curve:evaluate(v.cEval)
+			if v.x < 0 or v.x > 240 or v.y < 0 or v.y > 320 then
+				table.insert(remEnemy, i)
+			end
 		end
+	end
+	for i,v in ipairs(remEnemy) do
+		table.remove(enemies, v)
 	end
 end
